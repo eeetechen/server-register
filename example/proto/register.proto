@@ -1,0 +1,62 @@
+/* 官方示例
+syntax = "proto3";
+package helloworld;
+service Greeter {
+  // Sends a greeting
+  rpc SayHello (HelloRequest) returns (HelloReply) {}
+}
+
+// The request message containing the user's name.
+message HelloRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message HelloReply {
+  string message = 1;
+}
+*/
+syntax = "proto3";
+
+package register;
+
+option go_package = "../proto";
+
+import "timestamp.proto";
+
+service Register {
+  rpc Register(RegisterRequest) returns (RegisterReply) {}
+  rpc PullTask(PullTaskRequest) returns (PullTaskReply) {}
+  rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskReply) {}
+}
+
+message RegisterRequest {
+  string hostname = 1;
+  google.protobuf.Timestamp time = 2;
+}
+
+message RegisterReply {
+
+}
+
+message Task {
+  int32 task_id = 1;
+  repeated string command = 2;
+}
+
+message PullTaskRequest {
+  string hostname = 1;
+}
+
+message PullTaskReply {
+  Task task = 1;
+}
+
+message CompleteTaskRequest {
+  string hostname = 1;
+  int32 task_id = 2;
+  string out_put = 3;
+}
+
+message CompleteTaskReply {
+}
