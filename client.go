@@ -2,8 +2,10 @@ package server_register
 
 import (
 	"context"
+	"fmt"
 	"github.com/golang/protobuf/ptypes"
 	retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"github.com/reyukari/server-register/etcd/discovery"
 	"github.com/reyukari/server-register/example/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -50,11 +52,12 @@ func NewClient(addr string) (*Client, error) {
 		retry.WithBackoff(retry.BackoffLinear(100 * time.Millisecond)),
 		retry.WithCodes(codes.NotFound, codes.Aborted),
 	}
-	cc, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor(opts...)))
+	cc, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, discovery.VersionLB)), grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor(opts...)))
 	if err != nil {
 		klog.V(5).Info(err)
 		return nil, err
 	}
+
 	c.client = proto.NewRegisterClient(cc)
 	c.register()
 	go c.timer()
