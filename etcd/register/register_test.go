@@ -2,7 +2,8 @@ package register
 
 import (
 	"fmt"
-	clientv3 "go.etcd.io/etcd/client/v3"
+	"github.com/reyukari/server-register/etcd/etcd-grpc"
+	"go.etcd.io/etcd/client/v3"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,11 +13,11 @@ import (
 
 func TestNewServiceRegister(t *testing.T) {
 	s, err := NewRegister(
-		SetName("hwholiday.srv.msg"),
+		SetName(etcd_grpc.ServerName),
 		SetAddress("127.0.0.1:123123"),
-		SetUsage("v1"),
+		SetWeight("1"),
 		SetEtcdConf(clientv3.Config{
-			Endpoints:   []string{"172.12.12.165:2379"},
+			Endpoints:   []string{"127.0.0.1:2379"},
 			DialTimeout: time.Second * 5,
 		}),
 	)

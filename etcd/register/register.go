@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	clientv3 "go.etcd.io/etcd/client/v3"
+	"github.com/robfig/cron/v3"
+	"go.etcd.io/etcd/client/v3"
 	"time"
 )
 
@@ -42,11 +43,6 @@ func NewRegister(opt ...RegisterOptions) (*Register, error) {
 		return s, err
 	}
 
-	_, err = etcdCli.Put(ctx, s.name, string(data), clientv3.WithLease(resp.ID))
-	if err != nil {
-		return s, err
-	}
-
 	//续约租约
 	s.keepAliveChan, err = etcdCli.KeepAlive(context.Background(), resp.ID)
 	if err != nil {
@@ -59,6 +55,26 @@ func (s *Register) ListenKeepAliveChan() (isClose bool) {
 	for range s.keepAliveChan {
 	}
 	return true
+}
+
+func (s *Register) CrontabUpdate() {
+	crontab := cron.New()
+	task := func() {
+		var ctx, cancel = context.WithTimeout(context.Background(), time.Duration(s.opts.RegisterTtl)*time.Second)
+		defer cancel()
+		data, err := json.Marshal(s.opts)
+		if err != nil {
+			return
+		}
+		_, err = s.etcdCli.Put(ctx, s.name, string(data))
+		if err != nil {
+			return
+		}
+	}
+	// 添加定时任务, * * * * * 是 crontab,表示每分钟执行一次
+	crontab.AddFunc("* * * * *", task)
+	// 启动定时器
+	crontab.Start()
 }
 
 // Close 注销服务

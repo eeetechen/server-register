@@ -2,7 +2,7 @@ package lock
 
 import (
 	"context"
-	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 	"time"
 )

@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/balancer/base"
 	"google.golang.org/grpc/resolver"
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -22,18 +23,22 @@ func newUsageBuilder(opt *Options) {
 }
 
 type ULbPickerBuild struct {
-	opt *Options // discovery Options info
+	opt *Options
 }
 
 func (r *ULbPickerBuild) Build(info base.PickerBuildInfo) balancer.Picker {
 	if len(info.ReadySCs) == 0 {
 		return base.NewErrPicker(balancer.ErrNoSubConnAvailable)
 	}
-	var scs = make(map[balancer.SubConn]*register.Options, len(info.ReadySCs))
+	var scs = make(map[balancer.SubConn]*Opt, len(info.ReadySCs))
 	for conn, addr := range info.ReadySCs {
 		nodeInfo := GetNodeInfo(addr.Address)
 		if nodeInfo != nil {
-			scs[conn] = nodeInfo
+			weight, _ := strconv.Atoi(nodeInfo.Node.Weight)
+			scs[conn] = &Opt{
+				nodeInfo,
+				weight,
+			}
 		}
 	}
 	if len(scs) == 0 {
@@ -45,28 +50,23 @@ func (r *ULbPickerBuild) Build(info base.PickerBuildInfo) balancer.Picker {
 }
 
 type ULBPicker struct {
-	node map[balancer.SubConn]*register.Options
+	node map[balancer.SubConn]*Opt
 	mu   sync.Mutex
+}
+
+type Opt struct {
+	*register.Options
+	weight int
 }
 
 func (p *ULBPicker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
 	p.mu.Lock()
 	t := time.Now().UnixNano() / 1e6
 	defer p.mu.Unlock()
-	version := info.Ctx.Value(UsageLB)
-	var subConns []balancer.SubConn
-	for conn, node := range p.node {
-		if version != "" {
-			if node.Node.Version == version.(string) {
-				subConns = append(subConns, conn)
-			}
-		}
-	}
-	if len(subConns) == 0 {
+	sc := p.RandNode()
+	if sc == nil {
 		return balancer.PickResult{}, errors.New("no match found conn")
 	}
-	index := rand.Intn(len(subConns))
-	sc := subConns[index]
 	return balancer.PickResult{SubConn: sc, Done: func(data balancer.DoneInfo) {
 		fmt.Println("test", info.FullMethodName, "end", data.Err, "time", time.Now().UnixNano()/1e6-t)
 	}}, nil
@@ -84,4 +84,22 @@ func GetNodeInfo(attr resolver.Address) *register.Options {
 	v := attr.Attributes.Value(attrKey{})
 	hi, _ := v.(*register.Options)
 	return hi
+}
+
+func (p *ULBPicker) RandNode() balancer.SubConn {
+	var total int
+	for _, nodeOpt := range p.node {
+		total += nodeOpt.weight
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	curr := rand.Intn(total)
+	for conn, nodeOpt := range p.node {
+		if curr <= nodeOpt.weight {
+			return conn
+		}
+		curr -= nodeOpt.weight
+	}
+
+	return nil
 }

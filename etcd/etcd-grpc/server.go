@@ -58,7 +58,7 @@ func main() {
 	s, err := register.NewRegister(
 		register.SetName(ServerName),
 		register.SetAddress(Addr),
-		register.SetUsage(value),
+		register.SetWeight(value),
 		register.SetSrv(srv),
 		register.SetEtcdConf(clientv3.Config{
 			Endpoints:   []string{"127.0.0.1:2379"},
@@ -69,6 +69,7 @@ func main() {
 		panic(err)
 	}
 	c := make(chan os.Signal, 1)
+	go s.CrontabUpdate()
 	go func() {
 		if s.ListenKeepAliveChan() {
 			c <- syscall.SIGQUIT

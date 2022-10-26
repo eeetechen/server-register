@@ -13,7 +13,7 @@ type Node struct {
 	Name    string `json:"name"`
 	Path    string `json:"path"`
 	Id      string `json:"id"`
-	Version string `json:"version"`
+	Weight  string `json:"weight"`
 	Address string `json:"address"`
 }
 
@@ -41,7 +41,7 @@ func newOptions(opt ...RegisterOptions) *Options {
 			Endpoints:   []string{"127.0.0.1:2379"},
 			DialTimeout: 5 * time.Second,
 		},
-		Node:        &Node{Version: "latest"},
+		Node:        &Node{Weight: "1"},
 		RegisterTtl: 10,
 		Endpoints:   make(map[string]Endpoints),
 	}
@@ -81,9 +81,9 @@ func SetRegisterTtl(registerTtl int64) RegisterOptions {
 	}
 }
 
-func SetUsage(usage string) RegisterOptions {
+func SetWeight(weight string) RegisterOptions {
 	return func(options *Options) {
-
+		options.Node.Weight = weight
 	}
 }
 func SetEtcdConf(conf clientv3.Config) RegisterOptions {
