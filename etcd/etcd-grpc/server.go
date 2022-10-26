@@ -15,11 +15,13 @@ import (
 	"time"
 )
 
+var ServerName string = "node.srv.app"
+
 type ApiService struct{}
 
 func (a ApiService) ApiTest(ctx context.Context, request *api.Request) (*api.Response, error) {
 	fmt.Println(request.String())
-	return &api.Response{Output: "v1v1v1v1v1v1v1v1v1v1"}, nil
+	return &api.Response{Output: "OK"}, nil
 }
 
 var Addr = "0.0.0.0:8089"
@@ -34,7 +36,7 @@ func main() {
 	// 在gRPC服务器注册我们的服务
 	var srv = &ApiService{}
 	api.RegisterApiServer(grpcServer, srv)
-	//用服务器 Serve() 方法以及我们的端口信息区实现阻塞等待，直到进程被杀死或者 Stop() 被调用
+
 	go func() {
 		err = grpcServer.Serve(listener)
 		if err != nil {
@@ -42,12 +44,12 @@ func main() {
 		}
 	}()
 	s, err := register.NewRegister(
-		register.SetName("hwholiday.srv.app"),
+		register.SetName(ServerName),
 		register.SetAddress(Addr),
-		register.SetVersion("v1"),
+		register.SetUsage("v1"),
 		register.SetSrv(srv),
 		register.SetEtcdConf(clientv3.Config{
-			Endpoints:   []string{"172.12.12.165:2379"},
+			Endpoints:   []string{"127.0.0.1:2379"},
 			DialTimeout: time.Second * 5,
 		}),
 	)
@@ -60,7 +62,7 @@ func main() {
 			c <- syscall.SIGQUIT
 		}
 	}()
-	fmt.Println("启动成功 === > ", Addr)
+	fmt.Println("success === > ", Addr)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	for a := range c {
 		switch a {

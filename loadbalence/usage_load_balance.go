@@ -1,4 +1,4 @@
-package discovery
+package loadbalence
 
 import (
 	"errors"
@@ -12,26 +12,20 @@ import (
 	"time"
 )
 
-const VersionLB = "version"
+const UsageLB = "usageLB"
 
-// NewBuilder creates a new weight balancer builder.
-func newVersionBuilder(opt *Options) {
+func newUsageBuilder(opt *Options) {
 	//balancer.Builder
-	builder := base.NewBalancerBuilder(VersionLB, &rrPickerBuilder{opt: opt}, base.Config{HealthCheck: true})
+	builder := base.NewBalancerBuilder(UsageLB, &ULbPickerBuild{opt: opt}, base.Config{HealthCheck: true})
 	balancer.Register(builder)
 	return
 }
 
-//move discovery init
-/*func init() {
-	newBuilder(nil)
-}*/
-
-type rrPickerBuilder struct {
+type ULbPickerBuild struct {
 	opt *Options // discovery Options info
 }
 
-func (r *rrPickerBuilder) Build(info base.PickerBuildInfo) balancer.Picker {
+func (r *ULbPickerBuild) Build(info base.PickerBuildInfo) balancer.Picker {
 	if len(info.ReadySCs) == 0 {
 		return base.NewErrPicker(balancer.ErrNoSubConnAvailable)
 	}
@@ -45,21 +39,21 @@ func (r *rrPickerBuilder) Build(info base.PickerBuildInfo) balancer.Picker {
 	if len(scs) == 0 {
 		return base.NewErrPicker(balancer.ErrNoSubConnAvailable)
 	}
-	return &rrPicker{
+	return &ULBPicker{
 		node: scs,
 	}
 }
 
-type rrPicker struct {
+type ULBPicker struct {
 	node map[balancer.SubConn]*register.Options
 	mu   sync.Mutex
 }
 
-func (p *rrPicker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
+func (p *ULBPicker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
 	p.mu.Lock()
 	t := time.Now().UnixNano() / 1e6
 	defer p.mu.Unlock()
-	version := info.Ctx.Value(VersionLB)
+	version := info.Ctx.Value(UsageLB)
 	var subConns []balancer.SubConn
 	for conn, node := range p.node {
 		if version != "" {

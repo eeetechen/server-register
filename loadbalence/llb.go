@@ -1,20 +1,19 @@
 package loadbalence
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/reyukari/server-register/etcd/register"
+	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"google.golang.org/grpc/balancer"
-	"google.golang.org/grpc/balancer/base"
 	"google.golang.org/grpc/resolver"
-	"math/rand"
+	"log"
 	"strings"
 	"sync"
 	"time"
 )
-
-const UsageLB = "usageLB"
 
 var ErrLoadBalancingPolicy = errors.New("LoadBalancingPolicy is empty or not apply")
 
@@ -29,76 +28,105 @@ type UsageLBConf struct {
 	opts    *Options
 }
 
-func newVersionBuilder(opt *Options) {
-	//balancer.Builder
-	builder := base.NewBalancerBuilder(UsageLB, &ULbPickerBuild{opt: opt}, base.Config{HealthCheck: true})
-	balancer.Register(builder)
-	return
-}
-
-type ULbPickerBuild struct {
-	opt *Options // discovery Options info
-}
-
-func (r *ULbPickerBuild) Build(info base.PickerBuildInfo) balancer.Picker {
-	if len(info.ReadySCs) == 0 {
-		return base.NewErrPicker(balancer.ErrNoSubConnAvailable)
+func NewUsageLB(opt ...ClientOptions) (resolver.Builder, error) {
+	s := &UsageLBConf{
+		opts: newOptions(opt...),
 	}
-	var scs = make(map[balancer.SubConn]*register.Options, len(info.ReadySCs))
-	for conn, addr := range info.ReadySCs {
-		nodeInfo := GetNodeInfo(addr.Address)
-		if nodeInfo != nil {
-			scs[conn] = nodeInfo
+	if s.opts.LoadBalancingPolicy == UsageLB {
+		newUsageBuilder(s.opts)
+	} else {
+		return nil, ErrLoadBalancingPolicy
+	}
+	etcdCli, err := clientv3.New(s.opts.EtcdConf)
+	if err != nil {
+		return nil, err
+	}
+	s.etcdCli = etcdCli
+	return s, nil
+}
+
+// Build 当调用`grpc.Dial()`时执行
+func (d *UsageLBConf) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
+	d.cc = cc
+	var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	res, err := d.etcdCli.Get(ctx, d.opts.SrvName, clientv3.WithPrefix())
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range res.Kvs {
+		if err = d.AddNode(v.Key, v.Value); err != nil {
+			log.Println(err)
+			continue
 		}
 	}
-	if len(scs) == 0 {
-		return base.NewErrPicker(balancer.ErrNoSubConnAvailable)
+	if len(res.Kvs) == 0 {
+		log.Printf("no %s service found , waiting for the service to join \n", d.opts.SrvName)
 	}
-	return &ULBPicker{
-		node: scs,
-	}
+	go func(dd *UsageLBConf) {
+		dd.watcher()
+	}(d)
+	return d, err
 }
 
-type ULBPicker struct {
-	node map[balancer.SubConn]*register.Options
-	mu   sync.Mutex
+func (d *UsageLBConf) AddNode(key, val []byte) error {
+	var data = new(register.Options)
+	err := json.Unmarshal(val, data)
+	if err != nil {
+		return err
+	}
+	addr := resolver.Address{Addr: data.Node.Address}
+	addr = SetNodeInfo(addr, data)
+	d.Node.Store(string(key), addr)
+	d.cc.UpdateState(resolver.State{Addresses: d.GetAddress()})
+	return nil
 }
 
-func (p *ULBPicker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
-	p.mu.Lock()
-	t := time.Now().UnixNano() / 1e6
-	defer p.mu.Unlock()
-	version := info.Ctx.Value(UsageLB)
-	var subConns []balancer.SubConn
-	for conn, node := range p.node {
-		if version != "" {
-			if node.Node.Version == version.(string) {
-				subConns = append(subConns, conn)
-			}
-		}
-	}
-	if len(subConns) == 0 {
-		return balancer.PickResult{}, errors.New("no match found conn")
-	}
-	index := rand.Intn(len(subConns))
-	sc := subConns[index]
-	return balancer.PickResult{SubConn: sc, Done: func(data balancer.DoneInfo) {
-		fmt.Println("test", info.FullMethodName, "end", data.Err, "time", time.Now().UnixNano()/1e6-t)
-	}}, nil
+func (d *UsageLBConf) DelNode(key []byte) error {
+	keyStr := string(key)
+	d.Node.Delete(keyStr)
+	d.cc.UpdateState(resolver.State{Addresses: d.GetAddress()})
+	return nil
 }
 
-type attrKey struct{}
-
-func SetNodeInfo(addr resolver.Address, hInfo *register.Options) resolver.Address {
-	//addr.Attributes = attributes.New()
-	addr.Attributes = addr.Attributes.WithValue(attrKey{}, hInfo)
+func (d *UsageLBConf) GetAddress() []resolver.Address {
+	var addr []resolver.Address
+	d.Node.Range(func(key, value interface{}) bool {
+		addr = append(addr, value.(resolver.Address))
+		return true
+	})
 	return addr
 }
 
-func GetNodeInfo(attr resolver.Address) *register.Options {
-	v := attr.Attributes.Value(attrKey{})
-	hi, _ := v.(*register.Options)
-	return hi
+func (d *UsageLBConf) Scheme() string {
+	return "usageLB"
+}
+
+// watcher 监听前缀
+func (d *UsageLBConf) watcher() {
+	rch := d.etcdCli.Watch(context.Background(), d.opts.SrvName, clientv3.WithPrefix())
+	for res := range rch {
+		for _, ev := range res.Events {
+			switch ev.Type {
+			case mvccpb.PUT: //新增或修改
+				if err := d.AddNode(ev.Kv.Key, ev.Kv.Value); err != nil {
+					log.Println(err)
+				}
+			case mvccpb.DELETE: //删除
+				if err := d.DelNode(ev.Kv.Key); err != nil {
+					log.Println(err)
+				}
+			}
+		}
+	}
+}
+
+func (s *UsageLBConf) ResolveNow(rn resolver.ResolveNowOptions) {
+	//log.Println("ResolveNow")
+}
+
+func (s *UsageLBConf) Close() {
+	s.etcdCli.Close()
 }
 
 /*

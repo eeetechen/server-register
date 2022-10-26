@@ -81,9 +81,9 @@ func SetRegisterTtl(registerTtl int64) RegisterOptions {
 	}
 }
 
-func SetVersion(version string) RegisterOptions {
+func SetUsage(usage string) RegisterOptions {
 	return func(options *Options) {
-		options.Node.Version = version
+
 	}
 }
 func SetEtcdConf(conf clientv3.Config) RegisterOptions {

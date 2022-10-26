@@ -2,14 +2,19 @@ syntax = "proto3";
 package proto;
 option go_package = "/api";
 
+/*  生成proto文件命令 最新
+    protoc3 --go-grpc_out=require_unimplemented_servers=false:. *.proto
+    protoc3 --go_out=. *.proto
+*/
+
 message Request {
   string input = 1;
+  int32 weight =2;
 }
 
 message Response {
   string output = 1;
 }
-//protoc -I. --go_out=plugins=grpc:. api.proto
 service Api{
   rpc ApiTest (Request) returns (Response){}
 }

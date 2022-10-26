@@ -41,6 +41,12 @@ func NewRegister(opt ...RegisterOptions) (*Register, error) {
 	if err != nil {
 		return s, err
 	}
+
+	_, err = etcdCli.Put(ctx, s.name, string(data), clientv3.WithLease(resp.ID))
+	if err != nil {
+		return s, err
+	}
+
 	//续约租约
 	s.keepAliveChan, err = etcdCli.KeepAlive(context.Background(), resp.ID)
 	if err != nil {
