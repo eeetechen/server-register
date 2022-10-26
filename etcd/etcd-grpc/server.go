@@ -5,15 +5,19 @@ import (
 	"fmt"
 	"github.com/reyukari/server-register/etcd/etcd-grpc/api"
 	"github.com/reyukari/server-register/etcd/register"
+	"github.com/shirou/gopsutil/cpu"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 	"log"
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 )
+
+var DefaultValue int = 80
 
 var ServerName string = "node.srv.app"
 
@@ -43,10 +47,18 @@ func main() {
 			panic(err)
 		}
 	}()
+
+	percent, _ := cpu.Percent(time.Second, false)
+	if len(percent) <= 0 {
+		percent = []float64{80}
+	}
+	usage := int64(float64(DefaultValue) / percent[0])
+	value := strconv.FormatInt(usage, 10)
+
 	s, err := register.NewRegister(
 		register.SetName(ServerName),
 		register.SetAddress(Addr),
-		register.SetUsage("v1"),
+		register.SetUsage(value),
 		register.SetSrv(srv),
 		register.SetEtcdConf(clientv3.Config{
 			Endpoints:   []string{"127.0.0.1:2379"},
