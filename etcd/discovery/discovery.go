@@ -100,7 +100,7 @@ func (d *Discovery) Scheme() string {
 	return "discovery"
 }
 
-//watcher 监听前缀
+// watcher 监听前缀
 func (d *Discovery) watcher() {
 	rch := d.etcdCli.Watch(context.Background(), d.opts.SrvName, clientv3.WithPrefix())
 	for res := range rch {
