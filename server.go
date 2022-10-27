@@ -2,10 +2,10 @@ package server_register
 
 import (
 	"context"
+	"fmt"
 	"github.com/reyukari/server-register/example/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
-	"k8s.io/klog/v2"
 	"net"
 	"net/http"
 	"time"
@@ -32,7 +32,7 @@ type Server struct {
 
 func (s *Server) Register(ctx context.Context, req *proto.RegisterRequest) (*proto.RegisterReply, error) {
 	if err := s.hub.Register(req.Hostname); err != nil {
-		klog.V(2).Info(err)
+		fmt.Println(err)
 		return nil, err
 	}
 	return &proto.RegisterReply{}, nil
@@ -45,7 +45,7 @@ func (s *Server) PullTask(ctx context.Context, req *proto.PullTaskRequest) (*pro
 
 func (s *Server) CompleteTask(ctx context.Context, req *proto.CompleteTaskRequest) (*proto.CompleteTaskReply, error) {
 	if err := s.hub.CompleteTask(req.Hostname, req.TaskId, req.OutPut); err != nil {
-		klog.V(2).Info(err)
+		fmt.Println(err)
 		return nil, err
 	}
 	return &proto.CompleteTaskReply{}, nil
@@ -53,7 +53,7 @@ func (s *Server) CompleteTask(ctx context.Context, req *proto.CompleteTaskReques
 
 func (s *Server) Close() {
 	if err := s.http.Shutdown(context.Background()); err != nil {
-		klog.V(2).Info(err)
+		fmt.Println(err)
 	}
 }
 
@@ -70,16 +70,16 @@ func NewServer(grpcAddr string, httpAddr string) *Server {
 	svr := grpc.NewServer()
 	lis, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
-		klog.Fatal("Failed to listen on addr:", grpcAddr)
+		panic(fmt.Sprintf("Failed to listen on addr:", grpcAddr))
 	}
 	proto.RegisterRegisterServer(svr, s)
 	go func() {
 		if err := svr.Serve(lis); err != nil {
-			klog.Fatal(err)
+			panic(err)
 		}
 	}()
 	go func() {
-		klog.Info("new task")
+		fmt.Println("new task")
 		s.NewTask([]string{"date"})
 	}()
 	return s

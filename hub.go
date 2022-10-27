@@ -2,7 +2,6 @@ package server_register
 
 import (
 	"fmt"
-	"k8s.io/klog/v2"
 	"sync"
 	"sync/atomic"
 )
@@ -66,7 +65,7 @@ func (h *Hub) PullTask(hostname string) *Task {
 }
 
 func (h *Hub) CompleteTask(hostname string, taskId int32, output string) error {
-	klog.Infof("CompleteTask hostname:%s taskId:%d output:(%s)", hostname, taskId, output)
+	fmt.Println("CompleteTask hostname:%s taskId:%d output:(%s)", hostname, taskId, output)
 	h.taskMu.Lock()
 	defer h.taskMu.Unlock()
 	for i, v := range h.tasks {

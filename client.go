@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"k8s.io/klog/v2"
 	"sync"
 	"time"
 )
@@ -39,7 +38,7 @@ type Client struct {
 func NewClient(addr string) (*Client, error) {
 	hostname, err := GetHostName()
 	if err != nil {
-		klog.Fatal(err)
+		panic(err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Client{
@@ -55,7 +54,7 @@ func NewClient(addr string) (*Client, error) {
 	}
 	cc, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, loadbalence.UsageLB)), grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor(opts...)))
 	if err != nil {
-		klog.V(5).Info(err)
+		fmt.Println(err)
 		return nil, err
 	}
 
@@ -94,7 +93,7 @@ func (c *Client) timer() {
 func (c *Client) register() {
 	//timestamp, err := ptypes.TimestampProto(time.Now())
 	//if err != nil {
-	//	klog.Fatal(err)
+	//	panic(err)
 	//}
 	timestamp := timestamppb.New(time.Now())
 	if _, err := c.client.Register(
@@ -103,7 +102,7 @@ func (c *Client) register() {
 		retry.WithMax(3),
 		retry.WithPerRetryTimeout(1*time.Second),
 	); err != nil {
-		klog.V(5).Info(err)
+		fmt.Println(err)
 	}
 }
 
@@ -116,10 +115,10 @@ func (c *Client) task() (err error) {
 		retry.WithMax(3),
 		retry.WithPerRetryTimeout(1*time.Second),
 	); err != nil {
-		klog.V(5).Info(err)
+		fmt.Println(err)
 		return err
 	}
-	klog.V(5).Info("reply:", reply)
+	fmt.Println("reply:", reply)
 	if reply.Task.TaskId == 0 || c.currentTaskId >= reply.Task.TaskId {
 		return nil
 	}
@@ -129,11 +128,11 @@ func (c *Client) task() (err error) {
 	}
 	var out string
 	if out, err = Exec(reply.Task.Command); err != nil {
-		klog.V(5).Info(err)
+		fmt.Println(err)
 		return err
 	}
 	if _, err = c.client.CompleteTask(context.Background(), &proto.CompleteTaskRequest{Hostname: c.hostname, TaskId: reply.Task.TaskId, OutPut: out}, retry.WithMax(3), retry.WithPerRetryTimeout(1*time.Second)); err != nil {
-		klog.V(5).Info(err)
+		fmt.Println(err)
 		return err
 	}
 	return nil
