@@ -7,7 +7,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"net"
-	"net/http"
 	"time"
 )
 
@@ -25,9 +24,8 @@ var kasp = keepalive.ServerParameters{
 }
 
 type Server struct {
-	ret  *Return
-	hub  *Hub
-	http *http.Server
+	ret *Return
+	hub *Hub
 }
 
 func (s *Server) Register(ctx context.Context, req *proto.RegisterRequest) (*proto.RegisterReply, error) {
@@ -49,12 +47,6 @@ func (s *Server) CompleteTask(ctx context.Context, req *proto.CompleteTaskReques
 		return nil, err
 	}
 	return &proto.CompleteTaskReply{}, nil
-}
-
-func (s *Server) Close() {
-	if err := s.http.Shutdown(context.Background()); err != nil {
-		fmt.Println(err)
-	}
 }
 
 func (s *Server) NewTask(commands []string) {
