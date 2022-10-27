@@ -3,13 +3,14 @@ package server_register
 import (
 	"context"
 	"fmt"
-	"github.com/golang/protobuf/ptypes"
 	retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/reyukari/server-register/example/proto"
 	"github.com/reyukari/server-register/loadbalence"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"k8s.io/klog/v2"
 	"sync"
 	"time"
@@ -52,7 +53,7 @@ func NewClient(addr string) (*Client, error) {
 		retry.WithBackoff(retry.BackoffLinear(100 * time.Millisecond)),
 		retry.WithCodes(codes.NotFound, codes.Aborted),
 	}
-	cc, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, loadbalence.UsageLB)), grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor(opts...)))
+	cc, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, loadbalence.UsageLB)), grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor(opts...)))
 	if err != nil {
 		klog.V(5).Info(err)
 		return nil, err
@@ -91,10 +92,11 @@ func (c *Client) timer() {
 }
 
 func (c *Client) register() {
-	timestamp, err := ptypes.TimestampProto(time.Now())
-	if err != nil {
-		klog.Fatal(err)
-	}
+	//timestamp, err := ptypes.TimestampProto(time.Now())
+	//if err != nil {
+	//	klog.Fatal(err)
+	//}
+	timestamp := timestamppb.New(time.Now())
 	if _, err := c.client.Register(
 		context.Background(),
 		&proto.RegisterRequest{Hostname: c.hostname, Time: timestamp},

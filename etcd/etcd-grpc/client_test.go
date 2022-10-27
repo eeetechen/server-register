@@ -7,6 +7,7 @@ import (
 	"github.com/reyukari/server-register/loadbalence"
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/resolver"
 	"log"
 	"testing"
@@ -29,7 +30,7 @@ func TestClient(t *testing.T) {
 	conn, err := grpc.Dial(
 		fmt.Sprintf("%s:///%s", r.Scheme(), ""),
 		grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, loadbalence.UsageLB)),
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
 		log.Fatalf("net.Connect err: %v", err)
