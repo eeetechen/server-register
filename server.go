@@ -61,11 +61,10 @@ func (s *Server) NewTask(commands []string) {
 	s.hub.NewTask(commands)
 }
 
-func NewServer(grpcAddr string, httpAddr string) *Server {
+func NewServer(grpcAddr string) *Server {
 	hub := NewHub(10)
 	s := &Server{
 		hub: hub,
-		//http: InitHttp(httpAddr, hub),
 	}
 	svr := grpc.NewServer()
 	lis, err := net.Listen("tcp", grpcAddr)

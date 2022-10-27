@@ -7,20 +7,19 @@ import (
 )
 
 var (
-	grpcservice string
-	httpservice string
+	grpcService string
+	httpService string
 )
 
 func init() {
-	flag.StringVar(&grpcservice, "grpcservice", "0.0.0.0:10000", "The address of the grpc server.")
-	flag.StringVar(&httpservice, "httpservice", "0.0.0.0:10001", "The address of the http server.")
+	flag.StringVar(&grpcService, "grpcservice", "0.0.0.0:10000", "The address of the grpc server.")
 }
 
 func main() {
 	flag.Parse()
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signal.SetupSignalHandler()
-	server := server_register.NewServer(grpcservice, httpservice)
+	server := server_register.NewServer(grpcService)
 	<-stopCh
 	server.Close()
 }
