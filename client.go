@@ -6,10 +6,12 @@ import (
 	retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/reyukari/server-register/example/proto"
 	"github.com/reyukari/server-register/loadbalence"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/resolver"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"sync"
 	"time"
@@ -40,6 +42,19 @@ func NewClient(addr string) (*Client, error) {
 	if err != nil {
 		panic(err)
 	}
+
+	r, err := loadbalence.NewUsageLB(
+		loadbalence.SetName(hostname),
+		loadbalence.SetLoadBalancingPolicy(loadbalence.UsageLB),
+		loadbalence.SetEtcdConf(clientv3.Config{
+			Endpoints:   []string{"127.0.0.1:2379"},
+			DialTimeout: time.Second * 5,
+		}))
+	if err != nil {
+		panic(err)
+	}
+	resolver.Register(r)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Client{
 		hostname:      hostname,

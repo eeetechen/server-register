@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	etcd_grpc "github.com/reyukari/server-register/etcd/etcd-grpc"
 	"github.com/robfig/cron/v3"
+	"github.com/shirou/gopsutil/cpu"
 	"go.etcd.io/etcd/client/v3"
+	"strconv"
 	"time"
 )
 
@@ -62,6 +65,16 @@ func (s *Register) CrontabUpdate() {
 	task := func() {
 		var ctx, cancel = context.WithTimeout(context.Background(), time.Duration(s.opts.RegisterTtl)*time.Second)
 		defer cancel()
+
+		percent, _ := cpu.Percent(time.Second, false)
+		if len(percent) <= 0 {
+			percent = []float64{80}
+		}
+		usage := int64(float64(etcd_grpc.DefaultValue) / percent[0])
+		value := strconv.FormatInt(usage, 10)
+
+		s.opts.SetWeight(value)
+
 		data, err := json.Marshal(s.opts)
 		if err != nil {
 			return

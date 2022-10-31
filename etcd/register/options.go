@@ -103,3 +103,7 @@ func SetMetadata(metadata map[string]string) RegisterOptions {
 		options.Metadata = metadata
 	}
 }
+
+func (o *Options) SetWeight(weight string) {
+	o.Node.Weight = weight
+}

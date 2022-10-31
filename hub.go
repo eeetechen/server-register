@@ -12,8 +12,8 @@ const (
 )
 
 type Hub struct {
-	nodeMu sync.RWMutex
-	nodes  map[string]*Node
+	mu    sync.RWMutex
+	nodes map[string]*Node
 
 	taskMu       sync.RWMutex
 	taskId       int32
@@ -43,8 +43,8 @@ func (h *Hub) Register(hostname string) error {
 	if hostname == "" {
 		return fmt.Errorf(ErrHostnameEmpty)
 	}
-	h.nodeMu.Lock()
-	defer h.nodeMu.Unlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	if _, ok := h.nodes[hostname]; !ok {
 		h.nodes[hostname] = NewNode(hostname)
 	}
