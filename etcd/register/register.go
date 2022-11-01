@@ -61,10 +61,12 @@ func (s *Register) ListenKeepAliveChan() (isClose bool) {
 
 func (s *Register) CrontabUpdate() {
 	crontab := cron.New()
+	ctx := context.Background()
+	resp, err := s.etcdCli.Grant(ctx, s.opts.RegisterTtl)
+	if err != nil {
+		return
+	}
 	task := func() {
-		var ctx, cancel = context.WithTimeout(context.Background(), time.Duration(s.opts.RegisterTtl)*time.Second)
-		defer cancel()
-
 		percent, _ := cpu.Percent(time.Second, false)
 		if len(percent) <= 0 {
 			percent = []float64{80}
@@ -79,6 +81,11 @@ func (s *Register) CrontabUpdate() {
 			return
 		}
 		_, err = s.etcdCli.Put(ctx, s.name, string(data))
+		if err != nil {
+			return
+		}
+		//续约租约
+		s.keepAliveChan, err = s.etcdCli.KeepAlive(context.Background(), resp.ID)
 		if err != nil {
 			return
 		}
