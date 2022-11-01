@@ -2,7 +2,6 @@ package register
 
 import (
 	"fmt"
-	"github.com/reyukari/server-register/etcd/etcd-grpc"
 	"go.etcd.io/etcd/client/v3"
 	"os"
 	"os/signal"
@@ -13,7 +12,7 @@ import (
 
 func TestNewServiceRegister(t *testing.T) {
 	s, err := NewRegister(
-		SetName(etcd_grpc.ServerName),
+		SetName("node.srv.app"),
 		SetAddress("127.0.0.1:123123"),
 		SetWeight("1"),
 		SetEtcdConf(clientv3.Config{

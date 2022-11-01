@@ -4,13 +4,14 @@ import (
 	"context"
 
 	"fmt"
+	"net"
+
 	etcd_grpc "github.com/reyukari/server-register/etcd/etcd-grpc"
-	"github.com/reyukari/server-register/example/proto"
+	"github.com/reyukari/server-register/proto"
 	"github.com/robfig/cron/v3"
 	"github.com/shirou/gopsutil/cpu"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
-	"net"
 
 	"strconv"
 	"time"
