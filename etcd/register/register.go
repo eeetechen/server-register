@@ -91,7 +91,11 @@ func (s *Register) CrontabUpdate() {
 		}
 	}
 	// 添加定时任务, * * * * * 是 crontab,表示每分钟执行一次
-	crontab.AddFunc("* * * * *", task)
+	_, err = crontab.AddFunc("* * * * *", task)
+	if err != nil {
+		panic(fmt.Errorf("AddFunc err :%w ", err))
+		return
+	}
 	// 启动定时器
 	crontab.Start()
 }
