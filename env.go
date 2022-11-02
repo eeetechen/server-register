@@ -3,6 +3,7 @@ package server_register
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
 	"os"
 	"os/exec"
 	"strconv"
@@ -30,7 +31,7 @@ func GetHostName() (string, error) {
 	if hostName != "" {
 		return hostName, nil
 	}
-	fmt.Println("get HOST_NAME from env failed, is env.(\"HOST_NAME\") already set? Will use hostname instead")
+	zap.S().Info("get HOST_NAME from env failed, is env.(\"HOST_NAME\") already set? Will use hostname instead")
 	return getHostName()
 }
 
@@ -41,7 +42,7 @@ func Exec(suffix []string) (out string, err error) {
 	t := CommandTimeout
 	if x := os.Getenv(CommandTimeoutEnv); x != "" {
 		if t, err = strconv.Atoi(x); err != nil {
-			fmt.Println(err)
+			zap.S().Error(err)
 		} else {
 			t = CommandTimeout
 		}
@@ -53,7 +54,7 @@ func Exec(suffix []string) (out string, err error) {
 	res, err = exec.CommandContext(ctx, "/bin/bash", commands...).Output()
 	cancel()
 	if err != nil {
-		fmt.Println(err)
+		zap.S().Error(err)
 		return "", err
 	}
 	return string(res), nil

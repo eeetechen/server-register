@@ -2,8 +2,8 @@ package loadbalence
 
 import (
 	"errors"
-	"fmt"
 	"github.com/reyukari/server-register/etcd/register"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/balancer/base"
 	"google.golang.org/grpc/resolver"
@@ -68,7 +68,7 @@ func (p *ULBPicker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
 		return balancer.PickResult{}, errors.New("no match found conn")
 	}
 	return balancer.PickResult{SubConn: sc, Done: func(data balancer.DoneInfo) {
-		fmt.Println("test", info.FullMethodName, "end", data.Err, "time", time.Now().UnixNano()/1e6-t)
+		zap.S().Info("test", info.FullMethodName, "end", data.Err, "time", time.Now().UnixNano()/1e6-t)
 	}}, nil
 }
 

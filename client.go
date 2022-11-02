@@ -7,6 +7,7 @@ import (
 	"github.com/reyukari/server-register/loadbalence"
 	"github.com/reyukari/server-register/proto"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -69,7 +70,7 @@ func NewClient(addr string) (*Client, error) {
 	}
 	cc, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, loadbalence.UsageLB)), grpc.WithUnaryInterceptor(retry.UnaryClientInterceptor(opts...)))
 	if err != nil {
-		fmt.Println(err)
+		zap.S().Error(err)
 		return nil, err
 	}
 
@@ -117,7 +118,7 @@ func (c *Client) register() {
 		retry.WithMax(3),
 		retry.WithPerRetryTimeout(1*time.Second),
 	); err != nil {
-		fmt.Println(err)
+		zap.S().Error(err)
 	}
 }
 
@@ -130,10 +131,10 @@ func (c *Client) task() (err error) {
 		retry.WithMax(3),
 		retry.WithPerRetryTimeout(1*time.Second),
 	); err != nil {
-		fmt.Println(err)
+		zap.S().Error(err)
 		return err
 	}
-	fmt.Println("reply:", reply)
+	zap.S().Info("reply:", reply)
 	if reply.Task.TaskId == 0 || c.currentTaskId >= reply.Task.TaskId {
 		return nil
 	}
@@ -143,11 +144,11 @@ func (c *Client) task() (err error) {
 	}
 	var out string
 	if out, err = Exec(reply.Task.Command); err != nil {
-		fmt.Println(err)
+		zap.S().Error(err)
 		return err
 	}
 	if _, err = c.client.CompleteTask(context.Background(), &proto.CompleteTaskRequest{Hostname: c.hostname, TaskId: reply.Task.TaskId, OutPut: out}, retry.WithMax(3), retry.WithPerRetryTimeout(1*time.Second)); err != nil {
-		fmt.Println(err)
+		zap.S().Error(err)
 		return err
 	}
 	return nil

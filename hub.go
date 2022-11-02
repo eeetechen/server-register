@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+
+	"go.uber.org/zap"
 )
 
 const (
@@ -65,7 +67,7 @@ func (h *Hub) PullTask(hostname string) *Task {
 }
 
 func (h *Hub) CompleteTask(hostname string, taskId int32, output string) error {
-	fmt.Println("CompleteTask hostname:%s taskId:%d output:(%s)", hostname, taskId, output)
+	zap.S().Info("CompleteTask hostname:%s taskId:%d output:(%s)", hostname, taskId, output)
 	h.taskMu.Lock()
 	defer h.taskMu.Unlock()
 	for i, v := range h.tasks {

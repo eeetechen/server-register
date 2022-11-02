@@ -7,6 +7,7 @@ import (
 	"github.com/reyukari/server-register/etcd/register"
 	"github.com/shirou/gopsutil/cpu"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -75,13 +76,13 @@ func main() {
 			c <- syscall.SIGQUIT
 		}
 	}()
-	fmt.Println("success === > ", Addr)
+	zap.S().Info("success === > ", Addr)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	for a := range c {
 		switch a {
 		case syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-			fmt.Println("退出")
-			fmt.Println(s.Close())
+			zap.S().Info("退出")
+			zap.S().Info(s.Close())
 			return
 		default:
 			return

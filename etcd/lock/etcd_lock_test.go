@@ -1,7 +1,7 @@
 package lock
 
 import (
-	"fmt"
+	"go.uber.org/zap"
 	"testing"
 	"time"
 )
@@ -14,32 +14,32 @@ func TestEtcdLock_TryLock(t *testing.T) {
 	lock := NewEtcdLock(cli, "/get/post", 5)
 
 	if err := lock.TryLock(); err != nil {
-		fmt.Println("1 err", err)
+		zap.S().Info("1 err", err)
 		return
 	}
-	fmt.Println("1 success")
-	go fmt.Println(lock.TryLock())
-	go fmt.Println(lock.TryLock())
-	go fmt.Println(lock.TryLock())
-	go fmt.Println(lock.TryLock())
-	go fmt.Println(lock.TryLock())
+	zap.S().Info("1 success")
+	go zap.S().Info(lock.TryLock())
+	go zap.S().Info(lock.TryLock())
+	go zap.S().Info(lock.TryLock())
+	go zap.S().Info(lock.TryLock())
+	go zap.S().Info(lock.TryLock())
 	time.Sleep(3 * time.Second)
-	fmt.Println(1, lock.UnLock())
+	zap.S().Info(1, lock.UnLock())
 	go func() {
 		time.Sleep(6 * time.Second)
 		if err := lock.TryLock(); err != nil {
-			fmt.Println("2 err")
+			zap.S().Info("2 err")
 			return
 		}
-		fmt.Println("2 success")
+		zap.S().Info("2 success")
 	}()
 	go func() {
 		time.Sleep(6 * time.Second)
 		if err := lock.TryLock(); err != nil {
-			fmt.Println("3 err")
+			zap.S().Info("3 err")
 			return
 		}
-		fmt.Println("3 success")
+		zap.S().Info("3 success")
 	}()
 	select {}
 }

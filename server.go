@@ -2,6 +2,7 @@ package server_register
 
 import (
 	"context"
+	"go.uber.org/zap"
 
 	"fmt"
 	"net"
@@ -26,7 +27,7 @@ type Server struct {
 
 func (s *Server) Register(ctx context.Context, req *proto.RegisterRequest) (*proto.RegisterReply, error) {
 	if err := s.hub.Register(req.Hostname); err != nil {
-		fmt.Println(err)
+		zap.S().Error(err)
 		return nil, err
 	}
 	return &proto.RegisterReply{}, nil
@@ -39,7 +40,7 @@ func (s *Server) PullTask(ctx context.Context, req *proto.PullTaskRequest) (*pro
 
 func (s *Server) CompleteTask(ctx context.Context, req *proto.CompleteTaskRequest) (*proto.CompleteTaskReply, error) {
 	if err := s.hub.CompleteTask(req.Hostname, req.TaskId, req.OutPut); err != nil {
-		fmt.Println(err)
+		zap.S().Error(err)
 		return nil, err
 	}
 	return &proto.CompleteTaskReply{}, nil
@@ -95,7 +96,7 @@ func NewServer(grpcAddr string) *Server {
 	svr := grpc.NewServer()
 	lis, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to listen on addr:", grpcAddr))
+		panic(fmt.Errorf("Failed to listen on addr:", grpcAddr))
 	}
 	proto.RegisterRegisterServer(svr, s)
 	var ctx, cancel = context.WithTimeout(context.Background(), time.Duration(10*time.Second))
@@ -134,7 +135,7 @@ func NewServer(grpcAddr string) *Server {
 		}
 	}()
 	go func() {
-		fmt.Println("new task")
+		zap.S().Info("new task")
 		s.NewTask([]string{"date"})
 	}()
 

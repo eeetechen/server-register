@@ -1,8 +1,8 @@
 package register
 
 import (
-	"fmt"
 	"go.etcd.io/etcd/client/v3"
+	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
@@ -33,7 +33,7 @@ func TestNewServiceRegister(t *testing.T) {
 	for a := range c {
 		switch a {
 		case syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-			fmt.Println("退出")
+			zap.S().Info("退出")
 			_ = s.Close()
 			return
 		default:
