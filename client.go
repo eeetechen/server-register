@@ -41,18 +41,18 @@ type Client struct {
 func NewClient(addr string) (*Client, error) {
 	hostname, err := GetHostName()
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	r, err := loadbalence.NewUsageLB(
 		loadbalence.SetName(hostname),
 		loadbalence.SetLoadBalancingPolicy(loadbalence.UsageLB),
 		loadbalence.SetEtcdConf(clientv3.Config{
-			Endpoints:   []string{"127.0.0.1:2379"},
+			Endpoints:   []string{DefaultEtcdUri},
 			DialTimeout: time.Second * 5,
 		}))
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 	resolver.Register(r)
 

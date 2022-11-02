@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	server_register "github.com/reyukari/server-register"
+	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,7 +24,7 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	client, err := server_register.NewClient(grpcService)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 	<-c
 	client.Close()

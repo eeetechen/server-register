@@ -4,7 +4,6 @@ import (
 	"context"
 	"go.uber.org/zap"
 
-	"fmt"
 	"net"
 
 	etcd_grpc "github.com/reyukari/server-register/etcd/etcd-grpc"
@@ -58,7 +57,7 @@ func (s *Server) CrontabUpdate() {
 
 		hostname, err := GetHostName()
 		if err != nil {
-			panic(err)
+			zap.S().Fatal(err)
 		}
 
 		percent, _ := cpu.Percent(time.Second, false)
@@ -83,11 +82,11 @@ func NewServer(grpcAddr string) *Server {
 	hub := NewHub(10)
 
 	etcdCli, err := clientv3.New(clientv3.Config{
-		Endpoints:   []string{"127.0.0.1:2379"},
+		Endpoints:   []string{DefaultEtcdUri},
 		DialTimeout: 5 * time.Second,
 	})
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 	s := &Server{
 		hub:     hub,
@@ -96,19 +95,19 @@ func NewServer(grpcAddr string) *Server {
 	svr := grpc.NewServer()
 	lis, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
-		panic(fmt.Errorf("Failed to listen on addr:", grpcAddr))
+		zap.S().Fatalf("Failed to listen on addr:", grpcAddr)
 	}
 	proto.RegisterRegisterServer(svr, s)
 	var ctx, cancel = context.WithTimeout(context.Background(), time.Duration(10*time.Second))
 	defer cancel()
 	resp, err := etcdCli.Grant(ctx, 10)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	hostname, err := GetHostName()
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	percent, _ := cpu.Percent(time.Second, false)
@@ -120,18 +119,18 @@ func NewServer(grpcAddr string) *Server {
 	//注册节点
 	_, err = etcdCli.Put(ctx, hostname, string(value), clientv3.WithLease(resp.ID))
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	//续约租约
 	s.keepAliveChan, err = etcdCli.KeepAlive(context.Background(), resp.ID)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	go func() {
 		if err := svr.Serve(lis); err != nil {
-			panic(err)
+			zap.S().Fatal(err)
 		}
 	}()
 	go func() {

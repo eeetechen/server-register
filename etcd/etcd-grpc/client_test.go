@@ -19,7 +19,7 @@ func TestClient(t *testing.T) {
 		loadbalence.SetName(ServerName),
 		loadbalence.SetLoadBalancingPolicy(loadbalence.UsageLB),
 		loadbalence.SetEtcdConf(clientv3.Config{
-			Endpoints:   []string{"127.0.0.1:2379"},
+			Endpoints:   []string{},
 			DialTimeout: time.Second * 5,
 		}))
 	if err != nil {

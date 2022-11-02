@@ -2,6 +2,7 @@ package lock
 
 import (
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -16,7 +17,7 @@ func NewEtcd(c *Conf) *clientv3.Client {
 		DialTimeout: time.Duration(c.DialTimeout) * time.Second,
 	})
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 	return cli
 }

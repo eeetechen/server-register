@@ -45,7 +45,7 @@ func main() {
 	go func() {
 		err = grpcServer.Serve(listener)
 		if err != nil {
-			panic(err)
+			zap.S().Fatal(err)
 		}
 	}()
 
@@ -67,7 +67,7 @@ func main() {
 		}),
 	)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 	c := make(chan os.Signal, 1)
 	go s.CrontabUpdate()
