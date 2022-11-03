@@ -6,6 +6,7 @@ import (
 	"github.com/reyukari/server-register/etcd/etcd-grpc/api"
 	"github.com/reyukari/server-register/loadbalence"
 	"go.etcd.io/etcd/client/v3"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/resolver"
@@ -23,7 +24,7 @@ func TestClient(t *testing.T) {
 			DialTimeout: time.Second * 5,
 		}))
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 	resolver.Register(r)
 	// 连接服务器
